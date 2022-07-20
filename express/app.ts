@@ -28,16 +28,33 @@ const router = require('./src/route');
 
 // const redis = require('./src/middleware/redis');
 const redis = require('redis');
+
+// Redis Port 6379이거나 지정된 레디스 포트를 사용한다.
+const redisPort: number = Number(process.env.REDIS_PORT) || 6379;
+
+// Redis가 local이면 ''로하면 로컬에 있는 서버로 접속
+const redisUrl: string = process.env.REDIS_URL || '';
+
 /* App  Global Variable S */
 
 // 시스템에 포트가 있다면 포트 사용 아니면 3000 포트
 // app set으로 넣으면 key값과 같이 데이터를 넣어주고, get으로 데이터를 받아온다.
 app.set('port', process.env.PORT || 4000);
 
+// Redis 연결
+const client = redis.createClient({
+	url: redisUrl,
+	port: redisPort,
+});
+
+client.connect();
+
+// global 변수에 넣어서 어디서든 사용이 가능하게 작업
+global.redis = client;
+
 /* App  Global Variable E */
 
 /* Application middleware S */
-
 app.use(cors());
 
 app.use(bodyPaser.urlencoded({ extended: true }));
@@ -51,30 +68,10 @@ app.use(function (req: Request, res: Response, next: NextFunction) {
 	localMessage(locales);
 	next();
 });
+
 // Router 설정
 app.use(router);
 
-// Redis Port 6379이거나 지정된 레디스 포트를 사용한다.
-const redisPort: number = Number(process.env.REDIS_PORT) || 6379;
-
-console.log(redisPort);
-
-const client = redis.createClient(redisPort);
-
-(async () => {
-	await client.connect();
-})();
-
-global.redis = client;
-
-(async () => {
-	await global.redis.set('aaa2', 'test333');
-})();
-// 레디스 연동 미들웨어
-// app.use(redis.redisClient);
-global.redis.get('aaa2', (err, reply) => {
-	console.log(reply); // zerocho
-});
 /* Application middleware E */
 
 const server = http.createServer(app);
